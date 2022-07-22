@@ -1,5 +1,3 @@
-
-from __future__ import absolute_import
 import argparse
 import logging
 import re
@@ -17,10 +15,16 @@ class DataIngestion:
         values = re.split(",",
                           re.sub('\r\n', '', re.sub(u'"', '', string_input)))
         row = dict(
-            zip(('Date', '', 'Open', 'High', 'Low', 'Close', 'Volume'),
+            zip(('Date', 'Open', 'High', 'Low', 'Close', 'Volume'),
                 values))
         return row
 
+
+def fix_date(data):
+    import datetime
+    d = datetime.datetime.strptime(data['Date'], "%d/%m/%Y")
+    data['Date'] = d.strftime("%Y-%m-%d")
+    return data
 
 def run(argv=None):
     parser = argparse.ArgumentParser()
@@ -30,7 +34,7 @@ def run(argv=None):
         required=False,
         help='Input file to read. This can be a local file or '
         'a file in a Google Storage Bucket.',
-        default='gs://dflow-proj-bucket-20220722/*.csv')
+        default='gs://dflow-proj-bucket-20220722/stock_data.csv')
 
     parser.add_argument('--output',
                         dest='output',
@@ -49,19 +53,14 @@ def run(argv=None):
     (
      p | 'Read from a File' >> beam.io.ReadFromText(known_args.input,
                                                   skip_header_lines=1)
-    
-
      | 'String To BigQuery Row' >>
      beam.Map(lambda s: data_ingestion.parse_method(s))
+     | 'FixDate' >> beam.Map(fix_date)
      | 'Write to BigQuery' >> beam.io.Write(
          beam.io.BigQuerySink(
-
              known_args.output,
-
              schema=SCHEMA,
-
              create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
-
              write_disposition=beam.io.BigQueryDisposition.WRITE_TRUNCATE)))
     p.run().wait_until_finish()
 
