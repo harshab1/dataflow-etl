@@ -7,6 +7,8 @@ import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
 import os
 
+# os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/home/harshavardhan_bashetty/arc-insights-20220721-9512100de8e5.json"
+
 PROJECT_ID = 'arc-insights-20220721'
 SCHEMA = 'Date:DATE,Open:FLOAT,High:FLOAT,Low:FLOAT,Close:FLOAT,Volume:INTEGER'
 
@@ -21,23 +23,20 @@ class DataIngestion:
 
 
 def run(argv=None):
-    """The main function which creates the pipeline and runs it."""
-
     parser = argparse.ArgumentParser()
-
     parser.add_argument(
         '--input',
         dest='input',
         required=False,
         help='Input file to read. This can be a local file or '
         'a file in a Google Storage Bucket.',
-        default='gs://stocks-project-2/full_history/AADR.csv')
+        default='gs://dflow-proj-bucket-20220722/*.csv')
 
     parser.add_argument('--output',
                         dest='output',
                         required=False,
                         help='Output BQ table to write results to.',
-                        default='stocks_data.historical_prices')
+                        default='dflow_data.stock_data')
 
 
     known_args, pipeline_args = parser.parse_known_args(argv)
@@ -59,9 +58,7 @@ def run(argv=None):
 
              known_args.output,
 
-
              schema=SCHEMA,
-
 
              create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
 
