@@ -4,27 +4,10 @@ import re
 import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
 import os
-
-# os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "/home/harshavardhan_bashetty/arc-insights-20220721-9512100de8e5.json"
+import dflow_lib
 
 PROJECT_ID = 'arc-insights-20220721'
 SCHEMA = 'Date:DATE,Open:FLOAT,High:FLOAT,Low:FLOAT,Close:FLOAT,Volume:INTEGER'
-
-class DataIngestion:
-    def parse_method(self, string_input):
-        values = re.split(",",
-                          re.sub('\r\n', '', re.sub(u'"', '', string_input)))
-        row = dict(
-            zip(('Date', 'Open', 'High', 'Low', 'Close', 'Volume'),
-                values))
-        return row
-
-
-def fix_date(data):
-    import datetime
-    d = datetime.datetime.strptime(data['Date'], "%d/%m/%Y")
-    data['Date'] = d.strftime("%Y-%m-%d")
-    return data
 
 def run(argv=None):
     parser = argparse.ArgumentParser()
@@ -45,8 +28,7 @@ def run(argv=None):
 
     known_args, pipeline_args = parser.parse_known_args(argv)
 
-    data_ingestion = DataIngestion()
-
+    data_ingestion = dflow_lib.DataIngestion()
 
     p = beam.Pipeline(options=PipelineOptions(pipeline_args))
 
@@ -55,7 +37,7 @@ def run(argv=None):
                                                   skip_header_lines=1)
      | 'String To BigQuery Row' >>
      beam.Map(lambda s: data_ingestion.parse_method(s))
-     | 'FixDate' >> beam.Map(fix_date)
+     | 'FixDate' >> beam.Map(DataIngestion.fix_date)
      | 'Write to BigQuery' >> beam.io.Write(
          beam.io.BigQuerySink(
              known_args.output,
